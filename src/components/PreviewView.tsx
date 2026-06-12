@@ -1,13 +1,5 @@
 import React, { useState } from "react";
-import {
-  Save,
-  RotateCcw,
-  FileText,
-  CheckCircle,
-  ChevronDown,
-  FileImage,
-  FileType,
-} from "lucide-react";
+import { Save, RotateCcw, FileText, CheckCircle, ChevronDown, FileImage, FileType } from "lucide-react";
 import { exportAsJpeg, exportAsPng, exportAsPdf } from "../utils/pdfExport";
 import type { ScannedDocument } from "../types";
 
@@ -26,38 +18,19 @@ export function PreviewView({ document, onSave, onRetry }: PreviewViewProps) {
   const [downloading, setDownloading] = useState(false);
   const [showFormatMenu, setShowFormatMenu] = useState(false);
 
-  const formatLabels: Record<
-    ExportFormat,
-    { label: string; icon: React.ReactNode; desc: string }
-  > = {
-    jpeg: {
-      label: "JPEG",
-      icon: <FileImage size={15} />,
-      desc: "Imagen comprimida, ligero",
-    },
-    png: {
-      label: "PNG",
-      icon: <FileImage size={15} />,
-      desc: "Sin pérdida, máxima calidad",
-    },
-    pdf: {
-      label: "PDF",
-      icon: <FileType size={15} />,
-      desc: "Documento PDF A4",
-    },
+  const formatLabels: Record<ExportFormat, { label: string; icon: React.ReactNode; desc: string }> = {
+    jpeg: { label: "JPEG", icon: <FileImage size={15} />, desc: "Imagen comprimida, ligero" },
+    png:  { label: "PNG",  icon: <FileImage size={15} />, desc: "Sin pérdida, máxima calidad" },
+    pdf:  { label: "PDF",  icon: <FileType  size={15} />, desc: "Documento PDF A4" },
   };
 
   const handleDownload = async () => {
     setDownloading(true);
     try {
       const fileName = name || "documento";
-      if (format === "jpeg") {
-        exportAsJpeg(document.processedDataUrl, fileName);
-      } else if (format === "png") {
-        await exportAsPng(document.processedDataUrl, fileName);
-      } else {
-        await exportAsPdf(document.processedDataUrl, fileName);
-      }
+      if (format === "jpeg")      exportAsJpeg(document.processedDataUrl, fileName);
+      else if (format === "png")  await exportAsPng(document.processedDataUrl, fileName);
+      else                        await exportAsPdf(document.processedDataUrl, fileName);
     } finally {
       setDownloading(false);
     }
@@ -70,40 +43,25 @@ export function PreviewView({ document, onSave, onRetry }: PreviewViewProps) {
 
   return (
     <div className="flex flex-col gap-5 px-4 py-5 max-w-lg mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-2">
         <FileText size={18} className="text-[#4F8EF7]" />
         <h2 className="text-sm font-bold text-white">Vista previa del escaneo</h2>
       </div>
 
-      {/* Image preview */}
       <div className="rounded-2xl overflow-hidden shadow-2xl border border-[#2A3A5C] bg-[#111827]">
-        <img
-          src={document.processedDataUrl}
-          alt="Documento digitalizado"
-          className="w-full object-contain max-h-[420px]"
-        />
+        <img src={document.processedDataUrl} alt="Documento digitalizado" className="w-full object-contain max-h-[420px]" />
       </div>
 
-      {/* Imagen original */}
       <details className="text-xs text-slate-500 cursor-pointer group">
         <summary className="select-none hover:text-slate-300 transition-colors flex items-center gap-1.5">
-          <ChevronDown
-            size={14}
-            className="group-open:rotate-180 transition-transform"
-          />
+          <ChevronDown size={14} className="group-open:rotate-180 transition-transform" />
           Ver imagen original
         </summary>
         <div className="mt-2 rounded-xl overflow-hidden border border-[#2A3A5C]">
-          <img
-            src={document.originalDataUrl}
-            alt="Original"
-            className="w-full object-contain max-h-64"
-          />
+          <img src={document.originalDataUrl} alt="Original" className="w-full object-contain max-h-64" />
         </div>
       </details>
 
-      {/* Nombre del archivo */}
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
           Nombre del documento
@@ -117,7 +75,6 @@ export function PreviewView({ document, onSave, onRetry }: PreviewViewProps) {
         />
       </div>
 
-      {/* Selector de formato */}
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
           Formato de exportación
@@ -130,16 +87,9 @@ export function PreviewView({ document, onSave, onRetry }: PreviewViewProps) {
             <div className="flex items-center gap-2 text-[#4F8EF7]">
               {formatLabels[format].icon}
               <span>{formatLabels[format].label}</span>
-              <span className="text-slate-400 font-normal">
-                — {formatLabels[format].desc}
-              </span>
+              <span className="text-slate-400 font-normal">— {formatLabels[format].desc}</span>
             </div>
-            <ChevronDown
-              size={16}
-              className={`text-slate-400 transition-transform ${
-                showFormatMenu ? "rotate-180" : ""
-              }`}
-            />
+            <ChevronDown size={16} className={`text-slate-400 transition-transform ${showFormatMenu ? "rotate-180" : ""}`} />
           </button>
 
           {showFormatMenu && (
@@ -147,28 +97,15 @@ export function PreviewView({ document, onSave, onRetry }: PreviewViewProps) {
               {(["jpeg", "png", "pdf"] as ExportFormat[]).map((f) => (
                 <button
                   key={f}
-                  onClick={() => {
-                    setFormat(f);
-                    setShowFormatMenu(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[#243660] ${
-                    format === f ? "text-[#4F8EF7] bg-[#1E3060]" : "text-white"
-                  }`}
+                  onClick={() => { setFormat(f); setShowFormatMenu(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[#243660] ${format === f ? "text-[#4F8EF7] bg-[#1E3060]" : "text-white"}`}
                 >
-                  <span
-                    className={
-                      format === f ? "text-[#4F8EF7]" : "text-slate-400"
-                    }
-                  >
+                  <span className={format === f ? "text-[#4F8EF7]" : "text-slate-400"}>
                     {formatLabels[f].icon}
                   </span>
                   <span className="font-semibold">{formatLabels[f].label}</span>
-                  <span className="text-slate-400 text-xs">
-                    {formatLabels[f].desc}
-                  </span>
-                  {format === f && (
-                    <CheckCircle size={14} className="ml-auto text-[#4F8EF7]" />
-                  )}
+                  <span className="text-slate-400 text-xs">{formatLabels[f].desc}</span>
+                  {format === f && <CheckCircle size={14} className="ml-auto text-[#4F8EF7]" />}
                 </button>
               ))}
             </div>
@@ -176,7 +113,6 @@ export function PreviewView({ document, onSave, onRetry }: PreviewViewProps) {
         </div>
       </div>
 
-      {/* Acciones */}
       <div className="flex flex-col gap-3">
         <button
           onClick={handleDownload}
@@ -206,15 +142,9 @@ export function PreviewView({ document, onSave, onRetry }: PreviewViewProps) {
           }`}
         >
           {saved ? (
-            <>
-              <CheckCircle size={16} className="text-green-400" />
-              Guardado en el historial
-            </>
+            <><CheckCircle size={16} className="text-green-400" />Guardado en el historial</>
           ) : (
-            <>
-              <Save size={16} />
-              Guardar en el historial
-            </>
+            <><Save size={16} />Guardar en el historial</>
           )}
         </button>
 

@@ -1,5 +1,5 @@
 export type Point = { x: number; y: number };
-export type Quad = [Point, Point, Point, Point]; // TL, TR, BR, BL
+export type Quad = [Point, Point, Point, Point];
 export type FilterMode = "bw" | "color" | "grayscale";
 
 // ─── CONVERSION FICHIER ───────────────────────────────────────────────────
@@ -82,7 +82,6 @@ export async function detectDocumentCorners(
         const imageData = ctx.getImageData(0, 0, w, h);
         const data = imageData.data;
 
-        // Niveaux de gris
         const gray = new Uint8Array(w * h);
         for (let i = 0; i < w * h; i++) {
           gray[i] = Math.round(
@@ -92,7 +91,6 @@ export async function detectDocumentCorners(
           );
         }
 
-        // Sobel
         const edges = new Uint8Array(w * h);
         for (let y = 1; y < h - 1; y++) {
           for (let x = 1; x < w - 1; x++) {
@@ -110,10 +108,7 @@ export async function detectDocumentCorners(
               gray[(y + 1) * w + (x - 1)] +
               2 * gray[(y + 1) * w + x] +
               gray[(y + 1) * w + (x + 1)];
-            edges[y * w + x] = Math.min(
-              255,
-              Math.sqrt(gx * gx + gy * gy)
-            );
+            edges[y * w + x] = Math.min(255, Math.sqrt(gx * gx + gy * gy));
           }
         }
 
@@ -137,10 +132,7 @@ export async function detectDocumentCorners(
 
         const hThresh = w * 0.03;
         const vThresh = h * 0.03;
-        let top = minY,
-          bottom = maxY,
-          left = minX,
-          right = maxX;
+        let top = minY, bottom = maxY, left = minX, right = maxX;
 
         for (let y = minY; y < h / 2; y++) {
           if (hProj[y] > hThresh) { top = y; break; }
@@ -157,7 +149,12 @@ export async function detectDocumentCorners(
 
         const docW = right - left;
         const docH = bottom - top;
-        if (docW / w < 0.2 || docH / h < 0.2 || left >= right || top >= bottom) {
+        if (
+          docW / w < 0.2 ||
+          docH / h < 0.2 ||
+          left >= right ||
+          top >= bottom
+        ) {
           resolve(defaultQuad());
           return;
         }
@@ -179,36 +176,26 @@ export async function detectDocumentCorners(
 
 // ─── TRANSFORMATION DE PERSPECTIVE ───────────────────────────────────────
 
-/**
- * Calcule la matrice homographique 3x3 (src → dst)
- * en utilisant la méthode des moindres carrés (DLT)
- */
 function computeHomography(
   srcPts: { x: number; y: number }[],
   dstPts: { x: number; y: number }[]
 ): number[] | null {
-  // Construire la matrice A (8x8) et le vecteur b (8)
   const A: number[][] = [];
   const b: number[] = [];
 
   for (let i = 0; i < 4; i++) {
     const { x: sx, y: sy } = srcPts[i];
     const { x: dx, y: dy } = dstPts[i];
-
-    // Ligne 1 : x
     A.push([sx, sy, 1, 0, 0, 0, -dx * sx, -dx * sy]);
     b.push(dx);
-    // Ligne 2 : y
     A.push([0, 0, 0, sx, sy, 1, -dy * sx, -dy * sy]);
     b.push(dy);
   }
 
-  // Élimination de Gauss avec pivot partiel
   const n = 8;
   const M: number[][] = A.map((row, i) => [...row, b[i]]);
 
   for (let col = 0; col < n; col++) {
-    // Pivot max
     let maxRow = col;
     let maxVal = Math.abs(M[col][col]);
     for (let row = col + 1; row < n; row++) {
@@ -218,29 +205,19 @@ function computeHomography(
       }
     }
     if (maxVal < 1e-12) return null;
-
     [M[col], M[maxRow]] = [M[maxRow], M[col]];
-
     const pivot = M[col][col];
     for (let k = col; k <= n; k++) M[col][k] /= pivot;
-
     for (let row = 0; row < n; row++) {
       if (row === col) continue;
       const factor = M[row][col];
-      for (let k = col; k <= n; k++) {
-        M[row][k] -= factor * M[col][k];
-      }
+      for (let k = col; k <= n; k++) M[row][k] -= factor * M[col][k];
     }
   }
 
-  // h = [h0..h7], avec h8 = 1 (normalisé)
   return M.map((row) => row[n]);
 }
 
-/**
- * Applique la transformation de perspective via mapping inverse
- * (pour chaque pixel destination, on cherche le pixel source)
- */
 export async function applyPerspectiveWarp(
   dataUrl: string,
   quad: Quad
@@ -251,7 +228,6 @@ export async function applyPerspectiveWarp(
       const W = img.width;
       const H = img.height;
 
-      // Canvas source
       const srcCanvas = document.createElement("canvas");
       srcCanvas.width = W;
       srcCanvas.height = H;
@@ -259,32 +235,18 @@ export async function applyPerspectiveWarp(
       srcCtx.drawImage(img, 0, 0);
       const srcPixels = srcCtx.getImageData(0, 0, W, H).data;
 
-      // Dénormaliser les coins SOURCE
       const [tl, tr, br, bl] = quad;
       const srcPts = [
-        { x: tl.x * W, y: tl.y * H }, // TL
-        { x: tr.x * W, y: tr.y * H }, // TR
-        { x: br.x * W, y: br.y * H }, // BR
-        { x: bl.x * W, y: bl.y * H }, // BL
+        { x: tl.x * W, y: tl.y * H },
+        { x: tr.x * W, y: tr.y * H },
+        { x: br.x * W, y: br.y * H },
+        { x: bl.x * W, y: bl.y * H },
       ];
 
-      // Calculer la taille de sortie
-      const wTop = Math.hypot(
-        srcPts[1].x - srcPts[0].x,
-        srcPts[1].y - srcPts[0].y
-      );
-      const wBot = Math.hypot(
-        srcPts[2].x - srcPts[3].x,
-        srcPts[2].y - srcPts[3].y
-      );
-      const hLeft = Math.hypot(
-        srcPts[3].x - srcPts[0].x,
-        srcPts[3].y - srcPts[0].y
-      );
-      const hRight = Math.hypot(
-        srcPts[2].x - srcPts[1].x,
-        srcPts[2].y - srcPts[1].y
-      );
+      const wTop = Math.hypot(srcPts[1].x - srcPts[0].x, srcPts[1].y - srcPts[0].y);
+      const wBot = Math.hypot(srcPts[2].x - srcPts[3].x, srcPts[2].y - srcPts[3].y);
+      const hLeft = Math.hypot(srcPts[3].x - srcPts[0].x, srcPts[3].y - srcPts[0].y);
+      const hRight = Math.hypot(srcPts[2].x - srcPts[1].x, srcPts[2].y - srcPts[1].y);
 
       const outW = Math.round(Math.max(wTop, wBot));
       const outH = Math.round(Math.max(hLeft, hRight));
@@ -294,7 +256,6 @@ export async function applyPerspectiveWarp(
         return;
       }
 
-      // Points destination (rectangle parfait)
       const dstPts = [
         { x: 0, y: 0 },
         { x: outW - 1, y: 0 },
@@ -302,12 +263,9 @@ export async function applyPerspectiveWarp(
         { x: 0, y: outH - 1 },
       ];
 
-      // Homographie INVERSE : dst → src
-      // (on calcule dst→src pour le mapping inverse)
       const H_inv = computeHomography(dstPts, srcPts);
 
       if (!H_inv) {
-        // Fallback : simple recadrage sans warp
         const fallbackCanvas = document.createElement("canvas");
         fallbackCanvas.width = outW;
         fallbackCanvas.height = outH;
@@ -325,7 +283,6 @@ export async function applyPerspectiveWarp(
 
       const [h0, h1, h2, h3, h4, h5, h6, h7] = H_inv;
 
-      // Canvas destination
       const dstCanvas = document.createElement("canvas");
       dstCanvas.width = outW;
       dstCanvas.height = outH;
@@ -333,17 +290,14 @@ export async function applyPerspectiveWarp(
       const dstImageData = dstCtx.createImageData(outW, outH);
       const dstPixels = dstImageData.data;
 
-      // Mapping inverse pixel par pixel
       for (let dy = 0; dy < outH; dy++) {
         for (let dx = 0; dx < outW; dx++) {
-          // Appliquer H_inv : (dx, dy) → (sx, sy)
           const denom = h6 * dx + h7 * dy + 1.0;
           if (Math.abs(denom) < 1e-10) continue;
 
           const sx = (h0 * dx + h1 * dy + h2) / denom;
           const sy = (h3 * dx + h4 * dy + h5) / denom;
 
-          // Interpolation bilinéaire
           const x0 = Math.floor(sx);
           const y0 = Math.floor(sy);
           const x1 = x0 + 1;
@@ -352,7 +306,6 @@ export async function applyPerspectiveWarp(
           const dstIdx = (dy * outW + dx) * 4;
 
           if (x0 < 0 || y0 < 0 || x1 >= W || y1 >= H) {
-            // Hors limites → blanc
             dstPixels[dstIdx] = 255;
             dstPixels[dstIdx + 1] = 255;
             dstPixels[dstIdx + 2] = 255;
@@ -372,38 +325,22 @@ export async function applyPerspectiveWarp(
           const i01 = (y1 * W + x0) * 4;
           const i11 = (y1 * W + x1) * 4;
 
-          dstPixels[dstIdx] = Math.round(
-            srcPixels[i00] * w00 +
-            srcPixels[i10] * w10 +
-            srcPixels[i01] * w01 +
-            srcPixels[i11] * w11
-          );
-          dstPixels[dstIdx + 1] = Math.round(
-            srcPixels[i00 + 1] * w00 +
-            srcPixels[i10 + 1] * w10 +
-            srcPixels[i01 + 1] * w01 +
-            srcPixels[i11 + 1] * w11
-          );
-          dstPixels[dstIdx + 2] = Math.round(
-            srcPixels[i00 + 2] * w00 +
-            srcPixels[i10 + 2] * w10 +
-            srcPixels[i01 + 2] * w01 +
-            srcPixels[i11 + 2] * w11
-          );
+          dstPixels[dstIdx]     = Math.round(srcPixels[i00] * w00 + srcPixels[i10] * w10 + srcPixels[i01] * w01 + srcPixels[i11] * w11);
+          dstPixels[dstIdx + 1] = Math.round(srcPixels[i00 + 1] * w00 + srcPixels[i10 + 1] * w10 + srcPixels[i01 + 1] * w01 + srcPixels[i11 + 1] * w11);
+          dstPixels[dstIdx + 2] = Math.round(srcPixels[i00 + 2] * w00 + srcPixels[i10 + 2] * w10 + srcPixels[i01 + 2] * w01 + srcPixels[i11 + 2] * w11);
           dstPixels[dstIdx + 3] = 255;
         }
       }
 
       dstCtx.putImageData(dstImageData, 0, 0);
-      resolve(dstCanvas.toDataURL("image/jpeg", 0.93));
+      resolve(dstCanvas.toDataURL("image/jpeg", 0.97));
     };
-
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
   });
 }
 
-// ─── FILTRE SCANNER ───────────────────────────────────────────────────────
+// ─── FILTRE SCANNER PROFESSIONNEL ────────────────────────────────────────
 
 export async function applyDocumentFilter(
   dataUrl: string,
@@ -412,56 +349,115 @@ export async function applyDocumentFilter(
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
+      const W = img.width;
+      const H = img.height;
+
       const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
+      canvas.width = W;
+      canvas.height = H;
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, W, H);
       const data = imageData.data;
-      const len = data.length;
 
       if (mode === "color") {
-        for (let i = 0; i < len; i += 4) {
-          data[i]     = Math.min(255, data[i] * 1.15);
-          data[i + 1] = Math.min(255, data[i + 1] * 1.1);
-          data[i + 2] = Math.min(255, data[i + 2] * 1.05);
+        for (let i = 0; i < data.length; i += 4) {
+          data[i]     = Math.min(255, Math.max(0, (data[i]     - 128) * 1.3 + 148));
+          data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * 1.3 + 148));
+          data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * 1.3 + 148));
         }
-      } else {
-        // Calculer min/max luminosité
-        let minL = 255, maxL = 0;
-        for (let i = 0; i < len; i += 4) {
-          const lum =
-            0.299 * data[i] +
-            0.587 * data[i + 1] +
-            0.114 * data[i + 2];
-          if (lum < minL) minL = lum;
-          if (lum > maxL) maxL = lum;
+        ctx.putImageData(imageData, 0, 0);
+        resolve(canvas.toDataURL("image/jpeg", 0.95));
+        return;
+      }
+
+      // Étape 1 : Niveaux de gris
+      const gray = new Uint8Array(W * H);
+      for (let i = 0; i < W * H; i++) {
+        gray[i] = Math.round(
+          0.299 * data[i * 4] +
+          0.587 * data[i * 4 + 1] +
+          0.114 * data[i * 4 + 2]
+        );
+      }
+
+      if (mode === "grayscale") {
+        let minV = 255, maxV = 0;
+        for (let i = 0; i < gray.length; i++) {
+          if (gray[i] < minV) minV = gray[i];
+          if (gray[i] > maxV) maxV = gray[i];
         }
-        const range = maxL - minL || 1;
+        const range = maxV - minV || 1;
+        for (let i = 0; i < W * H; i++) {
+          const v = Math.round(((gray[i] - minV) / range) * 255);
+          data[i * 4]     = v;
+          data[i * 4 + 1] = v;
+          data[i * 4 + 2] = v;
+        }
+        ctx.putImageData(imageData, 0, 0);
+        resolve(canvas.toDataURL("image/jpeg", 0.95));
+        return;
+      }
 
-        for (let i = 0; i < len; i += 4) {
-          const lum =
-            0.299 * data[i] +
-            0.587 * data[i + 1] +
-            0.114 * data[i + 2];
+      // Étape 2 : Seuillage adaptatif Bradley-Roth
+      const S = Math.round(Math.min(W, H) / 16);
+      const T = 0.15;
 
-          // Étirement de contraste
-          let v = ((lum - minL) / range) * 255;
-
-          if (mode === "bw") {
-            // Seuillage : fond blanc, texte noir
-            v = v > 145 ? Math.min(255, v * 1.18) : Math.max(0, v * 0.5);
-          }
-
-          data[i]     = v;
-          data[i + 1] = v;
-          data[i + 2] = v;
+      // Image intégrale
+      const integral = new Float64Array((W + 1) * (H + 1));
+      for (let y = 1; y <= H; y++) {
+        for (let x = 1; x <= W; x++) {
+          integral[y * (W + 1) + x] =
+            gray[(y - 1) * W + (x - 1)] +
+            integral[(y - 1) * (W + 1) + x] +
+            integral[y * (W + 1) + (x - 1)] -
+            integral[(y - 1) * (W + 1) + (x - 1)];
         }
       }
 
+      const result = new Uint8Array(W * H);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const x1 = Math.max(0, x - S);
+          const y1 = Math.max(0, y - S);
+          const x2 = Math.min(W - 1, x + S);
+          const y2 = Math.min(H - 1, y + S);
+          const count = (x2 - x1) * (y2 - y1);
+          const sum =
+            integral[(y2 + 1) * (W + 1) + (x2 + 1)] -
+            integral[y1 * (W + 1) + (x2 + 1)] -
+            integral[(y2 + 1) * (W + 1) + x1] +
+            integral[y1 * (W + 1) + x1];
+          const mean = sum / count;
+          result[y * W + x] = gray[y * W + x] < mean * (1 - T) ? 0 : 255;
+        }
+      }
+
+      // Étape 3 : Suppression du bruit isolé
+      const cleaned = new Uint8Array(result);
+      for (let y = 1; y < H - 1; y++) {
+        for (let x = 1; x < W - 1; x++) {
+          if (result[y * W + x] === 0) {
+            let whiteNeighbors = 0;
+            if (result[(y - 1) * W + x] === 255) whiteNeighbors++;
+            if (result[(y + 1) * W + x] === 255) whiteNeighbors++;
+            if (result[y * W + (x - 1)] === 255) whiteNeighbors++;
+            if (result[y * W + (x + 1)] === 255) whiteNeighbors++;
+            if (whiteNeighbors === 4) cleaned[y * W + x] = 255;
+          }
+        }
+      }
+
+      // Étape 4 : Écriture
+      for (let i = 0; i < W * H; i++) {
+        data[i * 4]     = cleaned[i];
+        data[i * 4 + 1] = cleaned[i];
+        data[i * 4 + 2] = cleaned[i];
+        data[i * 4 + 3] = 255;
+      }
+
       ctx.putImageData(imageData, 0, 0);
-      resolve(canvas.toDataURL("image/jpeg", 0.93));
+      resolve(canvas.toDataURL("image/png"));
     };
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;

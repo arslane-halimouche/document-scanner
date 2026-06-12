@@ -1,6 +1,3 @@
-/**
- * Génère un PDF à partir d'un dataUrl image
- */
 export async function exportAsPdf(
   dataUrl: string,
   filename: string
@@ -28,7 +25,6 @@ export async function exportAsPdf(
 
   const imgW = img.width;
   const imgH = img.height;
-
   const orientation = imgW > imgH ? "landscape" : "portrait";
   const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
 
@@ -46,9 +42,6 @@ export async function exportAsPdf(
   doc.save(`${filename}.pdf`);
 }
 
-/**
- * Télécharge l'image en JPEG
- */
 export function exportAsJpeg(dataUrl: string, filename: string): void {
   const link = document.createElement("a");
   link.href = dataUrl;
@@ -56,9 +49,6 @@ export function exportAsJpeg(dataUrl: string, filename: string): void {
   link.click();
 }
 
-/**
- * Convertit en PNG puis télécharge
- */
 export async function exportAsPng(
   dataUrl: string,
   filename: string

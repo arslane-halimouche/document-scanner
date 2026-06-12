@@ -11,9 +11,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [facingMode, setFacingMode] = useState<"user" | "environment">(
-    "environment"
-  );
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
   const [ready, setReady] = useState(false);
 
   const startCamera = useCallback(async (mode: "user" | "environment") => {
@@ -23,11 +21,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
       const s = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: mode,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
+        video: { facingMode: mode, width: { ideal: 1920 }, height: { ideal: 1080 } },
       });
       streamRef.current = s;
       if (videoRef.current) {
@@ -36,17 +30,13 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       }
       setError(null);
     } catch {
-      setError(
-        "No se puede acceder a la cámara. Verifique los permisos del navegador."
-      );
+      setError("No se puede acceder a la cámara. Verifique los permisos del navegador.");
     }
   }, []);
 
   useEffect(() => {
     startCamera(facingMode);
-    return () => {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-    };
+    return () => { streamRef.current?.getTracks().forEach((t) => t.stop()); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -71,26 +61,18 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-black/90 border-b border-white/5">
-        <button
-          onClick={onClose}
-          className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-        >
+        <button onClick={onClose} className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors">
           <X size={20} />
         </button>
         <span className="text-white text-sm font-semibold tracking-wide">
           Digitalizar un documento
         </span>
-        <button
-          onClick={handleFlip}
-          className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-        >
+        <button onClick={handleFlip} className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors">
           <RotateCcw size={18} />
         </button>
       </div>
 
-      {/* Visor — SIN rectángulo guía */}
       <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black">
         {error ? (
           <div className="text-white text-center px-6 flex flex-col items-center gap-3">
@@ -98,16 +80,8 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
             <p className="text-sm text-white/70">{error}</p>
           </div>
         ) : (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover"
-          />
+          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
         )}
-
-        {/* Indicador de carga */}
         {!ready && !error && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/60">
             <div className="flex flex-col items-center gap-3">
@@ -118,7 +92,6 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
         )}
       </div>
 
-      {/* Botón de captura */}
       <div className="flex items-center justify-center py-8 bg-black/90 border-t border-white/5">
         <button
           onClick={handleCapture}

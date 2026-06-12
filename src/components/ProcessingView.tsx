@@ -6,10 +6,7 @@ interface ProcessingViewProps {
   label?: string;
 }
 
-export function ProcessingView({
-  imageSrc,
-  label = "Procesando…",
-}: ProcessingViewProps) {
+export function ProcessingView({ imageSrc, label = "Procesando…" }: ProcessingViewProps) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -30,7 +27,6 @@ export function ProcessingView({
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#4F8EF7]/5 to-transparent" />
       </div>
-
       <div className="text-center">
         <div className="flex items-center gap-2 justify-center text-[#4F8EF7] font-semibold mb-3">
           <ScanLine size={18} className="animate-pulse" />
