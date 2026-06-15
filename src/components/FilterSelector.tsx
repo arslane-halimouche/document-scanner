@@ -1,4 +1,3 @@
-import React from "react";
 import type { FilterMode } from "../utils/imageProcessor";
 
 interface FilterSelectorProps {
@@ -20,7 +19,7 @@ const filters: {
 
 export function FilterSelector({ selected, onChange, previewUrl }: FilterSelectorProps) {
   return (
-    <div className="fixed inset-0 z-50 bg-[#0D1526] flex flex-col">
+    <div className="flex flex-col bg-[#0D1526] min-h-screen pb-28">
       {/* Header */}
       <div className="bg-[#0D1A35] border-b border-[#1E2D4D] px-4 py-3">
         <h2 className="text-white font-bold text-sm text-center">
@@ -31,11 +30,10 @@ export function FilterSelector({ selected, onChange, previewUrl }: FilterSelecto
         </p>
       </div>
 
-      {/* Contenu */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+      <div className="flex-1 px-4 py-4 flex flex-col gap-4 max-w-sm mx-auto w-full">
 
-        {/* Aperçu principal */}
-        <div className="w-full max-w-sm mx-auto rounded-2xl overflow-hidden border border-[#1E2D4D] shadow-2xl bg-white">
+        {/* Aperçu */}
+        <div className="w-full rounded-2xl overflow-hidden border border-[#1E2D4D] shadow-2xl bg-white">
           <img
             src={previewUrl}
             alt="Vista previa"
@@ -49,12 +47,12 @@ export function FilterSelector({ selected, onChange, previewUrl }: FilterSelecto
         </div>
 
         {/* Options */}
-        <div className="w-full max-w-sm mx-auto flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
           {filters.map((f) => (
             <button
               key={f.mode}
               onClick={() => onChange(f.mode)}
-              className={`flex items-center gap-4 rounded-2xl p-4 border-2 transition-all ${
+              className={`flex items-center gap-4 rounded-2xl p-4 border-2 transition-all cursor-pointer ${
                 selected === f.mode
                   ? "border-[#4F8EF7] bg-[#1A2744] shadow-lg shadow-blue-900/30"
                   : "border-[#1E2D4D] bg-[#0D1A35] hover:border-[#4F8EF7]/40 hover:bg-[#112040]"
